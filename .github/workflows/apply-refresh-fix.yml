@@ -22,6 +22,6 @@ jobs:
           if git diff --cached --quiet; then
             echo "no changes"
           else
-            git commit -m "Remove territory totals; live WR/lead in move list; bind ply via kE"
+            git commit -m "Fill current-row WR/lead; stamp next-move policy; restore ply after scan"
             git push
           fi
