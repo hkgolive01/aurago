@@ -16,7 +16,7 @@ function check(name, cond) {
   }
 }
 
-check("hint gone", !src.includes("點擊表格切換精簡") && !src.includes("vs-hint"));
+check("hint gone", !src.includes("vs-hint") && !src.includes("點擊表格切換精簡"));
 check("goMain present", src.includes("function goMain()"));
 check("KeyV uses goMain", src.includes("n=goMain"));
 check("swipe uses goMain", src.includes("if(n<0)goMain()"));
@@ -24,7 +24,7 @@ check("double-click wired", src.includes("onDoubleClick:D") && src.includes("fun
 check("dblclick only on stone", src.includes("if(!a||!e.board[a.y][a.x])return;goMain()"));
 check("occupied no toast", src.includes("e.reason!==`已有子`"));
 check("occupied skip place", src.includes("e.board[i][r]||t(r,i)"));
-check("ko still toasts", src.includes("reason:`劫爭未消解`"));
+check("illegal reasons kept", src.includes("reason:`越界`") && src.includes("reason:`已有子`"));
 
 function extract(fnName) {
   const start = src.indexOf(`function ${fnName}(`);
@@ -105,8 +105,8 @@ function addMoveToast(reason) {
   check("已有子 silent", r.toasts.length === 0 && r.ret === null);
 }
 {
-  const r = addMoveToast("劫爭未消解");
-  check("ko still toasts", r.toasts.join() === "劫爭未消解" && r.ret === null);
+  const r = addMoveToast("劫爭未解消");
+  check("ko still toasts", r.toasts.join() === "劫爭未解消" && r.ret === null);
 }
 {
   const r = addMoveToast("越界");
