@@ -14,6 +14,7 @@ function firstExisting(names) {
   return join(root, "assets/routes-aura26.js");
 }
 const routePath = firstExisting([
+  "assets/routes-aura31.js",
   "assets/routes-aura30.js",
   "assets/routes-aura29.js",
   "assets/routes-aura28.js",
@@ -60,7 +61,8 @@ check("old svg chart gone", !src.includes("a.length<2"));
 check("engine-stats gone", !src.includes("className:`engine-stats`"));
 check("wr-live stats gone", !src.includes("className:`wr-live`") && !src.includes("白勝率"));
 check("wr-key legend gone", !src.includes("className:`wr-key`") && !src.includes("粗線勝率") && !src.includes("藍點對抗"));
-check("fight wr/lead damp", src.includes("1+Math.abs(l[t])/12") && src.includes("4*w*(1-w)"));
+check("fight wr/lead damp in fightIndex", src.includes("Math.abs(e.scoreLead)/12") && src.includes("(-w*Math.log(w)"));
+check("no display-time re-damp", !src.includes("4*w*(1-w)"));
 check("wails strength dark empty", src.includes("rgba(15, 10, 5"));
 check("wails asterisk star", src.includes("Math.PI/3*i") && src.includes("s*.168"));
 check("wails territory scale", src.includes("s*.94*sc"));
@@ -70,7 +72,9 @@ check("entropy stamped", src.includes("entropy:fightIndex(n)"));
 check("blue fight fill", src.includes("rgba(0,0,255,.5)"));
 check("lead curve drawn", src.includes("yLd") && src.includes("ldPts") && src.includes("strokePts"));
 check("gold 50 line", src.includes(`strokeStyle=\`#ffd700\``) || src.includes('strokeStyle=`#ffd700`'));
-if (routePath.endsWith("aura30.js")) {
+if (routePath.endsWith("aura31.js")) {
+  check("routes31 imports index31", src.includes('from"./index-aura31.js"') && !src.includes('from"./index-aura26.js"'));
+} else if (routePath.endsWith("aura30.js")) {
   check("routes30 imports index30", src.includes('from"./index-aura30.js"') && !src.includes('from"./index-aura26.js"'));
 } else if (routePath.endsWith("aura29.js")) {
   check("routes29 imports index29", src.includes('from"./index-aura29.js"') && !src.includes('from"./index-aura26.js"'));
@@ -78,7 +82,7 @@ if (routePath.endsWith("aura30.js")) {
   check("routes28 imports index28", src.includes('from"./index-aura28.js"') && !src.includes('from"./index-aura26.js"'));
 }
 if (html) {
-  const ver = html.includes("routes-aura30.js") ? "30" : html.includes("routes-aura29.js") ? "29" : html.includes("routes-aura28.js") ? "28" : "";
+  const ver = html.includes("routes-aura31.js") ? "31" : html.includes("routes-aura30.js") ? "30" : html.includes("routes-aura29.js") ? "29" : html.includes("routes-aura28.js") ? "28" : "";
   check("html cache-bust aura2x", html.includes(`routes-aura${ver}.js`) && html.includes(`index-aura${ver}.js`));
   check("html no stale aura26 routes", !html.includes("routes-aura26.js"));
 }
@@ -200,11 +204,30 @@ vm.runInNewContext(
 {
   const fi = ctx.fightIndex;
   check("fight null", fi(null) === -1);
-  check("fight entropy already 0-100", fi({ entropy: 55 }) === 55);
-  check("fight entropy small *25", fi({ entropy: 2 }) === 50);
-  check("fight scoreStdev *5", fi({ scoreStdev: 8 }) === 40);
-  const p = fi({ candidates: [{ prior: 0.5 }, { prior: 0.5 }] });
-  check("fight priors in 0-100", p >= 0 && p <= 100);
+  const even = fi({ candidates: [{ prior: 0.5 }, { prior: 0.5 }], winrate: 0.5, scoreLead: 0 });
+  check("fight even wr in 0-100", even >= 0 && even <= 100);
+  const lopsided = fi({ candidates: [{ prior: 0.5 }, { prior: 0.5 }], winrate: 0.9, scoreLead: 12 });
+  check("one-sided wr/lead reduces fight", lopsided < even * 0.6);
+  check("one-sided fight much smaller", lopsided < 25);
+  const decided = fi({ candidates: [{ prior: 1 }], winrate: 0.99, scoreLead: 40 });
+  check("decided game near zero fight", decided < 5);
+  const h2 = (w) => (-w * Math.log(w) - (1 - w) * Math.log(1 - w)) / Math.log(2);
+  const std = fi({ scoreStdev: 8, winrate: 0.5, scoreLead: 0 });
+  check("fight scoreStdev *5 even", Math.abs(std - 40) < 1e-6);
+  const stdLead = fi({ scoreStdev: 8, winrate: 0.5, scoreLead: 12 });
+  check("scoreStdev lead-damped", Math.abs(stdLead - 40 / 2) < 1e-6);
+  const vis = fi({
+    candidates: [{ visits: 80 }, { visits: 20 }],
+    winrate: 0.5,
+    scoreLead: 0,
+  });
+  const visLop = fi({
+    candidates: [{ visits: 80 }, { visits: 20 }],
+    winrate: 0.9,
+    scoreLead: 0,
+  });
+  check("visits entropy used", vis > 0 && vis <= 100);
+  check("visits entropy wr-damped", visLop < vis * (h2(0.9) + 0.02));
 }
 
 {
@@ -215,7 +238,7 @@ vm.runInNewContext(
     null,
     0,
   );
-  check("even wr/lead keeps fight", Math.abs(even.en[0] - 80) < 1e-6);
+  check("stored entropy plotted as-is even", Math.abs(even.en[0] - 80) < 1e-6);
   const lopsided = ctx.wrSeries(
     { blackWRAfter: 0.9, scoreLead: 12, entropy: 100 },
     { _path: [] },
@@ -223,9 +246,7 @@ vm.runInNewContext(
     null,
     0,
   );
-  const expect = 100 * 4 * 0.9 * 0.1 * (1 / (1 + 12 / 12));
-  check("one-sided wr/lead reduces fight", Math.abs(lopsided.en[0] - expect) < 1e-6);
-  check("one-sided fight much smaller", lopsided.en[0] < 25);
+  check("stored entropy plotted as-is lopsided", Math.abs(lopsided.en[0] - 100) < 1e-6);
 }
 
 {
@@ -271,8 +292,7 @@ vm.runInNewContext(
     null,
     0,
   );
-  const damp = 4 * 0.61 * (1 - 0.61) * (1 / (1 + 4.4 / 12));
-  check("ply0 from root stamp without live", r.wr[0] === 0.61 && r.ld[0] === 4.4 && Math.abs(r.en[0] - 18 * damp) < 1e-6);
+  check("ply0 from root stamp without live", r.wr[0] === 0.61 && r.ld[0] === 4.4 && Math.abs(r.en[0] - 18) < 1e-6);
 }
 
 {

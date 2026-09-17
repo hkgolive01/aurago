@@ -24,10 +24,10 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add assets/routes-aura26.js assets/routes-aura30.js assets/index-aura30.js assets/styles-aura26.css assets/styles-aura30.css index.html tools/
+          git add assets/routes-aura26.js assets/routes-aura31.js assets/index-aura31.js assets/styles-aura26.css assets/styles-aura31.css index.html tools/
           if git diff --cached --quiet; then
             echo "no changes"
           else
-            git commit -m "Drop wr-key legend; Wails fight-index wr/lead damp; cache-bust aura30"
+            git commit -m "Wails fight-index (visit entropy + wr H2 + lead damp); drop wr-key; cache-bust aura31"
             git push
           fi

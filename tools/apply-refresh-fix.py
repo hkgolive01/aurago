@@ -8,7 +8,7 @@ JS = ROOT / "assets" / "routes-aura26.js"
 CSS = ROOT / "assets" / "styles-aura26.css"
 HTML = ROOT / "index.html"
 IDX = ROOT / "assets" / "index-aura26.js"
-VER = "aura30"
+VER = "aura31"
 
 
 def _js(name: str) -> str:
@@ -28,6 +28,7 @@ html.desk .wr-graph-wrap,html.desk .wr-graph{height:168px}
 .chart-box{display:none!important;height:0!important;margin:0!important}
 .hint.vs-hint,.vs-hint{display:none!important;height:0!important;margin:0!important;overflow:hidden!important;font-size:0!important}
 .engine-stats{display:none!important}
+.wr-key{display:none!important;height:0!important;margin:0!important;overflow:hidden!important;font-size:0!important}
 """
 
 YT_OLD = (
@@ -215,7 +216,7 @@ def patch_css(s: str) -> str:
 def cache_bust(js: str, css: str):
     dest = ROOT / "assets" / f"routes-{VER}.js"
     js_ver = js
-    for old in range(20, 31):
+    for old in range(20, 32):
         js_ver = js_ver.replace(f'from"./index-aura{old}.js"', f'from"./index-{VER}.js"')
     dest.write_text(js_ver, encoding="utf-8")
     print("wrote", dest, "bytes", len(js_ver.encode()))
@@ -223,7 +224,7 @@ def cache_bust(js: str, css: str):
     if IDX.exists():
         ix = IDX.read_text(encoding="utf-8")
         ix2 = ix
-        for old in range(20, 31):
+        for old in range(20, 32):
             ix2 = ix2.replace(f"routes-aura{old}.js", f"routes-{VER}.js")
         out = ROOT / "assets" / f"index-{VER}.js"
         out.write_text(ix2, encoding="utf-8")
@@ -236,7 +237,7 @@ def cache_bust(js: str, css: str):
     if HTML.exists():
         h = HTML.read_text(encoding="utf-8")
         h2 = h
-        for old in range(20, 31):
+        for old in range(20, 32):
             h2 = (
                 h2.replace(f"index-aura{old}.js", f"index-{VER}.js")
                 .replace(f"routes-aura{old}.js", f"routes-{VER}.js")
@@ -264,7 +265,8 @@ def verify(s: str):
         "rgba(0,0,255,.5)",
         "yLd",
         "ldPts",
-        "1+Math.abs(l[t])/12",
+        "Math.abs(e.scoreLead)/12",
+        "(-w*Math.log(w)",
         "rgba(15, 10, 5",
         "Math.PI/3*i",
         "s*.168",
@@ -281,6 +283,7 @@ def verify(s: str):
         "白勝率",
         "className:`wr-key`",
         "粗線勝率",
+        "4*w*(1-w)",
         "for(let i=0;i<5;i++){let a=-Math.PI/2",
     ]
     for x in need:
