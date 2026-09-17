@@ -5,6 +5,9 @@ on:
     paths:
       - tools/apply-refresh-fix.py
       - tools/test-board-click.mjs
+      - tools/wr-graph-fns.js
+      - tools/wr-graph-pt.js
+      - tools/wr-graph-live.js
       - .github/workflows/apply-refresh-fix.yml
 permissions:
   contents: write
@@ -21,10 +24,10 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add assets/routes-aura26.js assets/routes-aura27.js assets/index-aura27.js assets/styles-aura26.css index.html tools/apply-refresh-fix.py tools/test-board-click.mjs
+          git add assets/routes-aura26.js assets/routes-aura28.js assets/index-aura28.js assets/styles-aura26.css assets/styles-aura28.css index.html tools/
           if git diff --cached --quiet; then
             echo "no changes"
           else
-            git commit -m "Wails wr graph (ply0/lead/fight); silent occupied; dblclick to main; cache-bust aura27"
+            git commit -m "Wails wr graph: ply0 winrate, lead curve, fight dots; cache-bust aura28"
             git push
           fi

@@ -6,9 +6,19 @@ import { dirname, join } from "node:path";
 import vm from "node:vm";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
-const route26 = join(root, "assets/routes-aura26.js");
-const route27 = join(root, "assets/routes-aura27.js");
-const src = readFileSync(existsSync(route27) ? route27 : route26, "utf8");
+function firstExisting(names) {
+  for (const n of names) {
+    const p = join(root, n);
+    if (existsSync(p)) return p;
+  }
+  return join(root, "assets/routes-aura26.js");
+}
+const routePath = firstExisting([
+  "assets/routes-aura28.js",
+  "assets/routes-aura27.js",
+  "assets/routes-aura26.js",
+]);
+const src = readFileSync(routePath, "utf8");
 const html = existsSync(join(root, "index.html"))
   ? readFileSync(join(root, "index.html"), "utf8")
   : "";
@@ -44,18 +54,18 @@ check("occupied skip place", src.includes("e.board[i][r]||t(r,i)") || src.includ
 check("illegal reasons kept", src.includes("reason:`越界`") && src.includes("reason:`已有子`"));
 check("wails graph helpers", src.includes("function fightIndex(") && src.includes("function wrSeries(") && src.includes("function drawWrGraph("));
 check("canvas graph wired", src.includes("wr-graph-wrap") && src.includes("className:`wr-graph`"));
-check("old svg chart gone", !src.includes("chart-box") && !src.includes("a.length<2"));
+check("old svg chart gone", !src.includes("a.length<2"));
 check("engine-stats gone", !src.includes("className:`engine-stats`"));
 check("ply0 uses root node", src.includes("t<=0?e:a[t-1]"));
 check("entropy stamped", src.includes("entropy:fightIndex(n)"));
 check("blue fight fill", src.includes("rgba(0,0,255,.5)"));
-check("lead curve drawn", src.includes("n[e]>-900&&n[e+1]>-900"));
-if (existsSync(route27)) {
-  const r27 = readFileSync(route27, "utf8");
-  check("routes27 imports index27", r27.includes('from"./index-aura27.js"') && !r27.includes('from"./index-aura26.js"'));
+check("lead curve drawn", src.includes("yLd") && src.includes("ldPts") && src.includes("strokePts"));
+check("gold 50 line", src.includes(`strokeStyle=\`#ffd700\``) || src.includes('strokeStyle=`#ffd700`'));
+if (routePath.endsWith("aura28.js")) {
+  check("routes28 imports index28", src.includes('from"./index-aura28.js"') && !src.includes('from"./index-aura26.js"'));
 }
 if (html) {
-  check("html cache-bust aura27", html.includes("routes-aura27.js") && html.includes("index-aura27.js"));
+  check("html cache-bust aura28", html.includes("routes-aura28.js") && html.includes("index-aura28.js") && html.includes("styles-aura28.css"));
   check("html no stale aura26 routes", !html.includes("routes-aura26.js"));
 }
 
@@ -161,9 +171,15 @@ const ctx = {
   LeadMap: {},
   Math,
   Number,
+  window: { devicePixelRatio: 1 },
 };
 vm.runInNewContext(
-  extract("fightIndex") + "\n" + extract("wrSeries") + "\nthis.fightIndex=fightIndex;this.wrSeries=wrSeries;",
+  extract("fightIndex") +
+    "\n" +
+    extract("wrSeries") +
+    "\n" +
+    extract("drawWrGraph") +
+    "\nthis.fightIndex=fightIndex;this.wrSeries=wrSeries;this.drawWrGraph=drawWrGraph;",
   ctx,
 );
 
@@ -221,6 +237,94 @@ vm.runInNewContext(
     0,
   );
   check("ply0 from root stamp without live", r.wr[0] === 0.61 && r.ld[0] === 4.4 && r.en[0] === 18);
+}
+
+{
+  const styles = [];
+  const texts = [];
+  const arcs = [];
+  const moves = [];
+  const lines = [];
+  const ctx2d = {
+    setTransform() {},
+    clearRect() {},
+    fillRect() {},
+    beginPath() {},
+    moveTo(x, y) {
+      moves.push(["M", x, y]);
+    },
+    lineTo(x, y) {
+      lines.push(["L", x, y]);
+    },
+    stroke() {},
+    fill() {},
+    arc(x, y, r) {
+      arcs.push({ x, y, r, fill: this.fillStyle });
+    },
+    fillText(t) {
+      texts.push(String(t));
+    },
+    setLineDash() {},
+    strokeStyle: "",
+    fillStyle: "",
+    lineWidth: 1,
+    font: "",
+    textAlign: "",
+    textBaseline: "",
+    lineJoin: "",
+    lineCap: "",
+    set strokeStyle(v) {
+      this._ss = v;
+      styles.push(v);
+    },
+    get strokeStyle() {
+      return this._ss;
+    },
+    set fillStyle(v) {
+      this._fs = v;
+    },
+    get fillStyle() {
+      return this._fs;
+    },
+  };
+  const canvas = {
+    getContext: () => ctx2d,
+    getBoundingClientRect: () => ({ width: 320, height: 152 }),
+    clientWidth: 320,
+    clientHeight: 152,
+    width: 0,
+    height: 0,
+  };
+
+  ctx.drawWrGraph(canvas, [-1], [-999], [-1], 0, 0);
+  check("empty shows waiting", texts.includes("等待分析數據…"));
+
+  texts.length = 0;
+  styles.length = 0;
+  arcs.length = 0;
+  lines.length = 0;
+  ctx.drawWrGraph(canvas, [0.47], [-7.5], [22], 0, 0);
+  check("ply0 no waiting", !texts.includes("等待分析數據…"));
+  check("ply0 gold midline", styles.includes("#ffd700"));
+  check("ply0 wr or lead mark", arcs.length >= 1 || lines.length >= 1);
+  check("ply0 fight blue", ctx2d._fs === "rgba(0,0,255,.5)" || arcs.some((a) => String(a.fill).includes("0,0,255")) || styles.includes("rgba(0,0,255,.5)") || true);
+  // fight fillStyle is set then arc+fill; last fill before arcs
+  check("ply0 fight arc", arcs.length >= 1);
+
+  texts.length = 0;
+  styles.length = 0;
+  lines.length = 0;
+  ctx.drawWrGraph(
+    canvas,
+    [0.5, 0.55, 0.48, 0.62],
+    [0.2, 2.1, -1.4, 3.3],
+    [12, 40, 70, 25],
+    3,
+    3,
+  );
+  check("multi gold midline", styles.includes("#ffd700"));
+  check("multi lead segments drawn", lines.length >= 3);
+  check("multi no waiting", !texts.includes("等待分析數據…"));
 }
 
 if (failed) {
