@@ -28,6 +28,10 @@ REPLACEMENTS = [
 "function Lt({onConnect:e}){let[,tick]=(0,u.useState)(0);(0,u.useEffect)(()=>P(()=>tick(e=>e+1)),[]);let t=q(e=>e.engine),n=q(e=>e.analysis),r=q(e=>e.currentColor()),i=t.ready,vw=q.getState().view,live=i?j():null;live&&typeof live._view==`number`&&live._view>=0&&live._view!==vw&&(live=null);n&&typeof n._view==`number`&&n._view>=0&&n._view!==vw&&(n=null);n=n||live;let a=n?.toMove||r",
 ),
 (
+",u=q(e=>e.showSubBoard)?_t(n?.ownership,n?.toMove||`B`):null,d=u?vt(u):null",
+",own=q(e=>e.showSubBoard)?_t(n?.ownership,n?.toMove||`B`):null,d=own?vt(own):null",
+),
+(
 "if(!e){v(`終局變化無法分析，請回上一手`);return}try{let t=await ln(e);",
 "if(!e){v(`終局變化無法分析，請回上一手`);return}try{Ee=q.getState().view;let t=await ln(e);",
 ),
@@ -49,11 +53,6 @@ REPLACEMENTS = [
 ),
 ]
 
-# Already patched?
-if "let _v=typeof AnaView[e.token]==`number`?AnaView[e.token]:Ee" in s and "vw=q.getState().view,live=i?j():null" in s:
-    print("already patched")
-    sys.exit(0)
-
 applied = 0
 for old, new in REPLACEMENTS:
     n = s.count(old)
@@ -74,11 +73,17 @@ need = [
     "e._view>=0&&e._view!==st.view",
     "n=n||live",
     "tok===r||tok<Te))return",
+    "own=q(e=>e.showSubBoard)",
+    "d=own?vt(own):null",
 ]
 for x in need:
     if x not in s:
         print("verify fail", x, file=sys.stderr)
         sys.exit(1)
+
+if applied == 0:
+    print("already patched")
+    sys.exit(0)
 
 p.write_text(s, encoding="utf-8")
 print("patched", applied, "replacements, bytes", len(s.encode("utf-8")))
