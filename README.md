@@ -2,4 +2,4 @@
 
 圍棋錄譜，連接 KataGo 分析。
 
-使用：https://hkgolive01.github.io/aurago/
+https://hkgolive01.github.io/aurago/
