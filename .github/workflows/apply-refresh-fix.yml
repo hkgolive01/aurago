@@ -1,1 +1,30 @@
-PLACEHOLDER_YML
+name: apply-refresh-fix
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - tools/apply-refresh-fix.py
+      - tools/test-board-click.mjs
+      - .github/workflows/apply-refresh-fix.yml
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply patches
+        run: python3 tools/apply-refresh-fix.py
+      - name: Test graph / click / goMain
+        run: node tools/test-board-click.mjs
+      - name: Commit patched assets
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/routes-aura26.js assets/routes-aura27.js assets/index-aura27.js assets/styles-aura26.css index.html tools/apply-refresh-fix.py tools/test-board-click.mjs
+          if git diff --cached --quiet; then
+            echo "no changes"
+          else
+            git commit -m "Wails wr graph (ply0/lead/fight); silent occupied; dblclick to main; cache-bust aura27"
+            git push
+          fi
