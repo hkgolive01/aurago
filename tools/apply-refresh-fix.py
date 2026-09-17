@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Patch AuraGo: Wails sub-board overlay, drop wr-live stats, cache-bust."""
+"""Patch AuraGo: drop wr-key legend, Wails fight-index wr/lead damp, cache-bust."""
 from pathlib import Path
 import sys
 
@@ -8,7 +8,7 @@ JS = ROOT / "assets" / "routes-aura26.js"
 CSS = ROOT / "assets" / "styles-aura26.css"
 HTML = ROOT / "index.html"
 IDX = ROOT / "assets" / "index-aura26.js"
-VER = "aura29"
+VER = "aura30"
 
 
 def _js(name: str) -> str:
@@ -25,7 +25,6 @@ CSS_BLOCK = """
 .wr-graph-wrap{border:1px solid var(--line);background:#fff;border-radius:12px;height:152px;margin:0 0 10px;overflow:hidden}
 .wr-graph{width:100%;height:152px;display:block;cursor:pointer;touch-action:none;background:#fff}
 html.desk .wr-graph-wrap,html.desk .wr-graph{height:168px}
-.wr-key{letter-spacing:.12em;color:var(--muted);text-align:center;margin:-4px 0 10px;font-size:10px}
 .chart-box{display:none!important;height:0!important;margin:0!important}
 .hint.vs-hint,.vs-hint{display:none!important;height:0!important;margin:0!important;overflow:hidden!important;font-size:0!important}
 .engine-stats{display:none!important}
@@ -120,6 +119,10 @@ REPLACEMENTS = [
         "(0,u.useLayoutEffect)(()=>{f()},[e.board,r,t,e.coordsOn,i])",
         "(0,u.useLayoutEffect)(()=>{f()},[e.board,r,t,e.coordsOn,i,sg])",
     ),
+    (
+        "(0,Y.jsx)(Pt,{}),(0,Y.jsx)(`p`,{className:`wr-key`,children:`粗線勝率　細線目差　藍點對抗`}),(0,Y.jsx)(It,{})",
+        "(0,Y.jsx)(Pt,{}),(0,Y.jsx)(It,{})",
+    ),
 ]
 
 
@@ -212,7 +215,7 @@ def patch_css(s: str) -> str:
 def cache_bust(js: str, css: str):
     dest = ROOT / "assets" / f"routes-{VER}.js"
     js_ver = js
-    for old in range(20, 29):
+    for old in range(20, 31):
         js_ver = js_ver.replace(f'from"./index-aura{old}.js"', f'from"./index-{VER}.js"')
     dest.write_text(js_ver, encoding="utf-8")
     print("wrote", dest, "bytes", len(js_ver.encode()))
@@ -220,7 +223,7 @@ def cache_bust(js: str, css: str):
     if IDX.exists():
         ix = IDX.read_text(encoding="utf-8")
         ix2 = ix
-        for old in range(20, 29):
+        for old in range(20, 31):
             ix2 = ix2.replace(f"routes-aura{old}.js", f"routes-{VER}.js")
         out = ROOT / "assets" / f"index-{VER}.js"
         out.write_text(ix2, encoding="utf-8")
@@ -233,7 +236,7 @@ def cache_bust(js: str, css: str):
     if HTML.exists():
         h = HTML.read_text(encoding="utf-8")
         h2 = h
-        for old in range(20, 29):
+        for old in range(20, 31):
             h2 = (
                 h2.replace(f"index-aura{old}.js", f"index-{VER}.js")
                 .replace(f"routes-aura{old}.js", f"routes-{VER}.js")
@@ -261,7 +264,7 @@ def verify(s: str):
         "rgba(0,0,255,.5)",
         "yLd",
         "ldPts",
-        "wr-key",
+        "1+Math.abs(l[t])/12",
         "rgba(15, 10, 5",
         "Math.PI/3*i",
         "s*.168",
@@ -276,6 +279,8 @@ def verify(s: str):
         "a.length<2",
         "goMain()else",
         "白勝率",
+        "className:`wr-key`",
+        "粗線勝率",
         "for(let i=0;i<5;i++){let a=-Math.PI/2",
     ]
     for x in need:

@@ -14,6 +14,7 @@ function firstExisting(names) {
   return join(root, "assets/routes-aura26.js");
 }
 const routePath = firstExisting([
+  "assets/routes-aura30.js",
   "assets/routes-aura29.js",
   "assets/routes-aura28.js",
   "assets/routes-aura27.js",
@@ -58,6 +59,8 @@ check("canvas graph wired", src.includes("wr-graph-wrap") && src.includes("class
 check("old svg chart gone", !src.includes("a.length<2"));
 check("engine-stats gone", !src.includes("className:`engine-stats`"));
 check("wr-live stats gone", !src.includes("className:`wr-live`") && !src.includes("白勝率"));
+check("wr-key legend gone", !src.includes("className:`wr-key`") && !src.includes("粗線勝率") && !src.includes("藍點對抗"));
+check("fight wr/lead damp", src.includes("1+Math.abs(l[t])/12") && src.includes("4*w*(1-w)"));
 check("wails strength dark empty", src.includes("rgba(15, 10, 5"));
 check("wails asterisk star", src.includes("Math.PI/3*i") && src.includes("s*.168"));
 check("wails territory scale", src.includes("s*.94*sc"));
@@ -67,13 +70,15 @@ check("entropy stamped", src.includes("entropy:fightIndex(n)"));
 check("blue fight fill", src.includes("rgba(0,0,255,.5)"));
 check("lead curve drawn", src.includes("yLd") && src.includes("ldPts") && src.includes("strokePts"));
 check("gold 50 line", src.includes(`strokeStyle=\`#ffd700\``) || src.includes('strokeStyle=`#ffd700`'));
-if (routePath.endsWith("aura29.js")) {
+if (routePath.endsWith("aura30.js")) {
+  check("routes30 imports index30", src.includes('from"./index-aura30.js"') && !src.includes('from"./index-aura26.js"'));
+} else if (routePath.endsWith("aura29.js")) {
   check("routes29 imports index29", src.includes('from"./index-aura29.js"') && !src.includes('from"./index-aura26.js"'));
 } else if (routePath.endsWith("aura28.js")) {
   check("routes28 imports index28", src.includes('from"./index-aura28.js"') && !src.includes('from"./index-aura26.js"'));
 }
 if (html) {
-  const ver = html.includes("routes-aura29.js") ? "29" : html.includes("routes-aura28.js") ? "28" : "";
+  const ver = html.includes("routes-aura30.js") ? "30" : html.includes("routes-aura29.js") ? "29" : html.includes("routes-aura28.js") ? "28" : "";
   check("html cache-bust aura2x", html.includes(`routes-aura${ver}.js`) && html.includes(`index-aura${ver}.js`));
   check("html no stale aura26 routes", !html.includes("routes-aura26.js"));
 }
@@ -203,6 +208,27 @@ vm.runInNewContext(
 }
 
 {
+  const even = ctx.wrSeries(
+    { blackWRAfter: 0.5, scoreLead: 0, entropy: 80 },
+    { _path: [] },
+    [{ blackWinrate: 0.5, scoreLead: 0, entropy: 80 }],
+    null,
+    0,
+  );
+  check("even wr/lead keeps fight", Math.abs(even.en[0] - 80) < 1e-6);
+  const lopsided = ctx.wrSeries(
+    { blackWRAfter: 0.9, scoreLead: 12, entropy: 100 },
+    { _path: [] },
+    [{ blackWinrate: 0.9, scoreLead: 12, entropy: 100 }],
+    null,
+    0,
+  );
+  const expect = 100 * 4 * 0.9 * 0.1 * (1 / (1 + 12 / 12));
+  check("one-sided wr/lead reduces fight", Math.abs(lopsided.en[0] - expect) < 1e-6);
+  check("one-sided fight much smaller", lopsided.en[0] < 25);
+}
+
+{
   const live = {
     winrate: 0.47,
     toMove: "B",
@@ -245,7 +271,8 @@ vm.runInNewContext(
     null,
     0,
   );
-  check("ply0 from root stamp without live", r.wr[0] === 0.61 && r.ld[0] === 4.4 && r.en[0] === 18);
+  const damp = 4 * 0.61 * (1 - 0.61) * (1 / (1 + 4.4 / 12));
+  check("ply0 from root stamp without live", r.wr[0] === 0.61 && r.ld[0] === 4.4 && Math.abs(r.en[0] - 18 * damp) < 1e-6);
 }
 
 {
