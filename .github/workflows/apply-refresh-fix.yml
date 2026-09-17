@@ -18,16 +18,16 @@ jobs:
       - uses: actions/checkout@v4
       - name: Apply patches
         run: python3 tools/apply-refresh-fix.py
-      - name: Test graph / click / goMain
+      - name: Test graph / click / goMain / sub-board
         run: node tools/test-board-click.mjs
       - name: Commit patched assets
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add assets/routes-aura26.js assets/routes-aura28.js assets/index-aura28.js assets/styles-aura26.css assets/styles-aura28.css index.html tools/
+          git add assets/routes-aura26.js assets/routes-aura29.js assets/index-aura29.js assets/styles-aura26.css assets/styles-aura29.css index.html tools/
           if git diff --cached --quiet; then
             echo "no changes"
           else
-            git commit -m "Wails wr graph: ply0 winrate, lead curve, fight dots; cache-bust aura28"
+            git commit -m "Wails sub-board (asterisk/colors/territory); drop wr-live stats; cache-bust aura29"
             git push
           fi

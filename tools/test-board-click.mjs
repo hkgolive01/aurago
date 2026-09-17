@@ -14,6 +14,7 @@ function firstExisting(names) {
   return join(root, "assets/routes-aura26.js");
 }
 const routePath = firstExisting([
+  "assets/routes-aura29.js",
   "assets/routes-aura28.js",
   "assets/routes-aura27.js",
   "assets/routes-aura26.js",
@@ -56,16 +57,24 @@ check("wails graph helpers", src.includes("function fightIndex(") && src.include
 check("canvas graph wired", src.includes("wr-graph-wrap") && src.includes("className:`wr-graph`"));
 check("old svg chart gone", !src.includes("a.length<2"));
 check("engine-stats gone", !src.includes("className:`engine-stats`"));
+check("wr-live stats gone", !src.includes("className:`wr-live`") && !src.includes("白勝率"));
+check("wails strength dark empty", src.includes("rgba(15, 10, 5"));
+check("wails asterisk star", src.includes("Math.PI/3*i") && src.includes("s*.168"));
+check("wails territory scale", src.includes("s*.94*sc"));
+check("sub-board draws candidates", src.includes("gt(k.ctx,t.candidates"));
 check("ply0 uses root node", src.includes("t<=0?e:a[t-1]"));
 check("entropy stamped", src.includes("entropy:fightIndex(n)"));
 check("blue fight fill", src.includes("rgba(0,0,255,.5)"));
 check("lead curve drawn", src.includes("yLd") && src.includes("ldPts") && src.includes("strokePts"));
 check("gold 50 line", src.includes(`strokeStyle=\`#ffd700\``) || src.includes('strokeStyle=`#ffd700`'));
-if (routePath.endsWith("aura28.js")) {
+if (routePath.endsWith("aura29.js")) {
+  check("routes29 imports index29", src.includes('from"./index-aura29.js"') && !src.includes('from"./index-aura26.js"'));
+} else if (routePath.endsWith("aura28.js")) {
   check("routes28 imports index28", src.includes('from"./index-aura28.js"') && !src.includes('from"./index-aura26.js"'));
 }
 if (html) {
-  check("html cache-bust aura28", html.includes("routes-aura28.js") && html.includes("index-aura28.js") && html.includes("styles-aura28.css"));
+  const ver = html.includes("routes-aura29.js") ? "29" : html.includes("routes-aura28.js") ? "28" : "";
+  check("html cache-bust aura2x", html.includes(`routes-aura${ver}.js`) && html.includes(`index-aura${ver}.js`));
   check("html no stale aura26 routes", !html.includes("routes-aura26.js"));
 }
 
@@ -325,6 +334,29 @@ vm.runInNewContext(
   check("multi gold midline", styles.includes("#ffd700"));
   check("multi lead segments drawn", lines.length >= 3);
   check("multi no waiting", !texts.includes("等待分析數據…"));
+}
+
+{
+  const ytSrc = extract("yt");
+  const yt = new Function(ytSrc + "\nreturn yt;")();
+  const board = Array.from({ length: 19 }, () => Array(19).fill(0));
+  board[3][3] = 1;
+  board[3][15] = 2;
+  const own = Array(361).fill(0);
+  own[3 * 19 + 3] = 0.99;
+  own[3 * 19 + 4] = 0.7;
+  own[3 * 19 + 15] = -0.99;
+  own[3 * 19 + 14] = -0.7;
+  const marks = yt(own, board);
+  const at = (x, y) => marks.find((m) => m.x === x && m.y === y);
+  const bStar = at(3, 3);
+  const bEmpty = at(4, 3);
+  const wStar = at(15, 3);
+  const wEmpty = at(14, 3);
+  check("black stone high own is green star", !!(bStar && bStar.star && bStar.color.includes("0, 255, 0")));
+  check("empty black terr is dark", !!(bEmpty && !bEmpty.star && bEmpty.color.includes("15, 10, 5")));
+  check("white stone high own is red star", !!(wStar && wStar.star && wStar.color.includes("255, 0, 0")));
+  check("empty white terr is white", !!(wEmpty && !wEmpty.star && wEmpty.color.includes("255, 255, 255")));
 }
 
 if (failed) {

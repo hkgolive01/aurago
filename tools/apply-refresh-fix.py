@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
-"""Patch AuraGo routes + CSS: Wails wr graph (ply0/lead/fight), silent occupied, dblclick-to-main, cache-bust."""
+"""Patch AuraGo: Wails sub-board overlay, drop wr-live stats, cache-bust."""
 from pathlib import Path
-import shutil
 import sys
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -9,7 +8,7 @@ JS = ROOT / "assets" / "routes-aura26.js"
 CSS = ROOT / "assets" / "styles-aura26.css"
 HTML = ROOT / "index.html"
 IDX = ROOT / "assets" / "index-aura26.js"
-VER = "aura28"
+VER = "aura29"
 
 
 def _js(name: str) -> str:
@@ -22,9 +21,7 @@ NEW_LIVE = _js("wr-graph-live.js")
 
 CSS_BLOCK = """
 /* wr-graph-wails */
-.wr-live{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:baseline;margin:0 0 8px;font-variant-numeric:tabular-nums}
-.wr-live .k{letter-spacing:.12em;color:var(--gold);font-size:10px;margin-right:5px}
-.wr-live .v{font-family:var(--font-serif);font-size:15px;font-weight:600}
+.wr-live{display:none!important;height:0!important;margin:0!important;overflow:hidden!important}
 .wr-graph-wrap{border:1px solid var(--line);background:#fff;border-radius:12px;height:152px;margin:0 0 10px;overflow:hidden}
 .wr-graph{width:100%;height:152px;display:block;cursor:pointer;touch-action:none;background:#fff}
 html.desk .wr-graph-wrap,html.desk .wr-graph{height:168px}
@@ -33,6 +30,32 @@ html.desk .wr-graph-wrap,html.desk .wr-graph{height:168px}
 .hint.vs-hint,.vs-hint{display:none!important;height:0!important;margin:0!important;overflow:hidden!important;font-size:0!important}
 .engine-stats{display:none!important}
 """
+
+YT_OLD = (
+    "function yt(e,t){let n=[];for(let r=0;r<19;r++)for(let i=0;i<19;i++){"
+    "let a=e[r*19+i],o=t[r][i],s=Math.abs(a),c=Math.min(1,s*.78+.22),l=s>.95,"
+    "u=a>=0?o===1||a>=.5?`rgba(0, 255, 0, ${c})`:null:o===2||a<=-.5?`rgba(255, 0, 0, ${c})`:null;"
+    "u&&n.push({x:i,y:r,star:l,text:String(Math.round(s*10)),color:u})}return n}"
+)
+YT_NEW = (
+    "function yt(e,t){let n=[];for(let r=0;r<19;r++)for(let i=0;i<19;i++){"
+    "let a=e[r*19+i],o=t[r][i],s=Math.abs(a),c=Math.min(1,s*.78+.22),l=s>.95,u;"
+    "a>=0?u=o===1?`rgba(0, 255, 0, ${c})`:a>=.5?`rgba(15, 10, 5, ${c})`:null:"
+    "u=o===2?`rgba(255, 0, 0, ${c})`:a<=-.5?`rgba(255, 255, 255, ${c})`:null;"
+    "u&&n.push({x:i,y:r,star:l,text:String(Math.round(s*10)),color:u})}return n}"
+)
+
+WT_OLD = (
+    "function wt(e,t,n,r){e.beginPath();for(let i=0;i<5;i++){"
+    "let a=-Math.PI/2+i*2*Math.PI/5,o=a+Math.PI/5,s=t+Math.cos(a)*r,c=n+Math.sin(a)*r,"
+    "l=t+Math.cos(o)*r*.38,u=n+Math.sin(o)*r*.38;i===0?e.moveTo(s,c):e.lineTo(s,c),e.lineTo(l,u)}"
+    "e.closePath(),e.fill()}"
+)
+WT_NEW = (
+    "function wt(e,t,n,r){e.beginPath();for(let i=0;i<3;i++){"
+    "let a=Math.PI/3*i;e.moveTo(t-r*Math.cos(a),n-r*Math.sin(a)),e.lineTo(t+r*Math.cos(a),n+r*Math.sin(a))}"
+    "e.stroke()}"
+)
 
 REPLACEMENTS = [
     (
@@ -74,6 +97,28 @@ REPLACEMENTS = [
     (
         "c&&(c.blackWRAfter=o,c.scoreLead=s,c.evalVisits=n.visits,c.scoreMean=s),rememberLead(a,s)",
         "c&&(c.blackWRAfter=o,c.scoreLead=s,c.evalVisits=n.visits,c.scoreMean=s,c.entropy=fightIndex(n)),rememberLead(a,s)",
+    ),
+    (YT_OLD, YT_NEW),
+    (WT_OLD, WT_NEW),
+    (
+        "e.star?(a.fillStyle=e.color,wt(a,t,n,s*.2))",
+        "e.star?(a.strokeStyle=e.color,a.lineWidth=Math.max(1.5,s*.09),wt(a,t,n,s*.168))",
+    ),
+    (
+        "let t=c(e.x),n=c(e.y),r=e.count>=10?s*.86:s*(.56+e.count*.026);a.font=`bold ${Math.max(9,Math.floor(r))}px \"Noto Sans TC\", \"PingFang TC\", sans-serif`;let i=a.measureText(String(e.count)).width,h=r,p=s*.24",
+        "let t=c(e.x),n=c(e.y),sc=e.count>=10?1:.5+(e.count-1)*.05,r=s*.94*sc;a.font=`bold ${Math.max(9,Math.floor(r))}px \"Noto Sans TC\", \"PingFang TC\", sans-serif`;let i=a.measureText(String(e.count)).width,h=r,p=s*.24*sc",
+    ),
+    (
+        "let e=At(),t=q(e=>e.showSubBoard),n=q(e=>e.setShowSubBoard),r=q(e=>e.showOwnership),i=q(e=>e.analysis),a=(0,u.useRef)(null)",
+        "let e=At(),t=q(e=>e.showSubBoard),n=q(e=>e.setShowSubBoard),r=q(e=>e.showOwnership),i=q(e=>e.analysis),sg=q(e=>e.showSuggestions),a=(0,u.useRef)(null)",
+    ),
+    (
+        "g.current=r,Et(e,o.current,n,c.current,l)}",
+        "g.current=r;let hasC=sg!==!1&&t&&t.candidates&&t.candidates.length;Et(e,o.current,n,c.current,hasC?!1:l);if(hasC){let k=ht(e);k&&gt(k.ctx,t.candidates,t.toMove||`B`,o.current,k.css,c.current)}}",
+    ),
+    (
+        "(0,u.useLayoutEffect)(()=>{f()},[e.board,r,t,e.coordsOn,i])",
+        "(0,u.useLayoutEffect)(()=>{f()},[e.board,r,t,e.coordsOn,i,sg])",
     ),
 ]
 
@@ -128,18 +173,21 @@ def replace_engine_stats(s: str) -> str:
         if j < 0:
             raise SystemExit("engine-stats terminator not found")
         s = s[:i] + NEW_LIVE + "]})}function Rt" + s[j + len(term) :]
-        print("replace engine-stats with wr-live + graph")
+        print("replace engine-stats with graph")
         return s
-    if "wr-live" in s:
-        old = "),(0,Y.jsx)(Pt,{}),(0,Y.jsx)(It,{})"
-        new = "),(0,Y.jsx)(Pt,{}),(0,Y.jsx)(`p`,{className:`wr-key`,children:`粗線勝率　細線目差　藍點對抗`}),(0,Y.jsx)(It,{})"
-        if "wr-key" not in s and old in s:
-            s = s.replace(old, new, 1)
-            print("insert wr-key")
-        else:
-            print("engine-stats already replaced")
+    live = "(0,Y.jsxs)(`div`,{className:`wr-live`"
+    i = s.find(live)
+    if i >= 0:
+        j = s.find("),(0,Y.jsx)(Pt,{})", i)
+        if j < 0:
+            raise SystemExit("wr-live terminator not found")
+        s = s[:i] + s[j + 1 :]
+        print("strip wr-live stats row")
         return s
-    raise SystemExit("engine-stats block not found")
+    if "className:`wr-live`" not in s:
+        print("wr-live already gone")
+        return s
+    raise SystemExit("engine-stats / wr-live block not found")
 
 
 def patch_js(s: str) -> str:
@@ -155,19 +203,16 @@ def patch_js(s: str) -> str:
 
 
 def patch_css(s: str) -> str:
-    if "wr-graph-wails" in s:
-        # refresh block
-        idx = s.find("/* wr-graph-wails */")
-        if idx >= 0:
-            return s[:idx].rstrip() + "\n" + CSS_BLOCK
-        return s
+    idx = s.find("/* wr-graph-wails */")
+    if idx >= 0:
+        return s[:idx].rstrip() + "\n" + CSS_BLOCK
     return s.rstrip() + "\n" + CSS_BLOCK
 
 
 def cache_bust(js: str, css: str):
     dest = ROOT / "assets" / f"routes-{VER}.js"
-    js_ver = js.replace('from"./index-aura26.js"', f'from"./index-{VER}.js"')
-    for old in range(20, 28):
+    js_ver = js
+    for old in range(20, 29):
         js_ver = js_ver.replace(f'from"./index-aura{old}.js"', f'from"./index-{VER}.js"')
     dest.write_text(js_ver, encoding="utf-8")
     print("wrote", dest, "bytes", len(js_ver.encode()))
@@ -175,7 +220,7 @@ def cache_bust(js: str, css: str):
     if IDX.exists():
         ix = IDX.read_text(encoding="utf-8")
         ix2 = ix
-        for old in range(20, 28):
+        for old in range(20, 29):
             ix2 = ix2.replace(f"routes-aura{old}.js", f"routes-{VER}.js")
         out = ROOT / "assets" / f"index-{VER}.js"
         out.write_text(ix2, encoding="utf-8")
@@ -188,7 +233,7 @@ def cache_bust(js: str, css: str):
     if HTML.exists():
         h = HTML.read_text(encoding="utf-8")
         h2 = h
-        for old in range(20, 28):
+        for old in range(20, 29):
             h2 = (
                 h2.replace(f"index-aura{old}.js", f"index-{VER}.js")
                 .replace(f"routes-aura{old}.js", f"routes-{VER}.js")
@@ -217,13 +262,21 @@ def verify(s: str):
         "yLd",
         "ldPts",
         "wr-key",
+        "rgba(15, 10, 5",
+        "Math.PI/3*i",
+        "s*.168",
+        "s*.94*sc",
+        "gt(k.ctx,t.candidates",
     ]
     forbid = [
         "點擊表格切換精簡",
         "className:`hint vs-hint`",
         "className:`engine-stats`",
+        "className:`wr-live`",
         "a.length<2",
         "goMain()else",
+        "白勝率",
+        "for(let i=0;i<5;i++){let a=-Math.PI/2",
     ]
     for x in need:
         if x not in s:
